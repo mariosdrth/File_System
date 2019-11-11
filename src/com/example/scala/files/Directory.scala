@@ -1,5 +1,7 @@
 package com.example.scala.files
 
+import com.example.scala.filesystem.MyFileSystemException
+
 import scala.annotation.tailrec
 
 class Directory(override val parentPath: String, override val name: String, val contents: List[DirEntry])
@@ -15,8 +17,16 @@ class Directory(override val parentPath: String, override val name: String, val 
     if (path.isEmpty) this
     else findEntry(path.head).asDirectory.findDescendant(path.tail)
 
+  def findDescendant(relativePath: String): Directory =
+    if (relativePath.isEmpty) this
+    else findDescendant(relativePath.split(Directory.SEPARATOR).toList)
+
+  def removeEntry(entryName: String): Directory =
+    if (!hasEntry(entryName)) this
+    else new Directory(parentPath, name, contents.filter(x => !x.name.equals(entryName)))
+
   def addEntry(newEntry: DirEntry): Directory =
-    new Directory(path, name, contents :+ newEntry)
+    new Directory(parentPath, name, contents :+ newEntry)
 
   def findEntry(entryName: String): DirEntry = {
     @tailrec
@@ -25,13 +35,23 @@ class Directory(override val parentPath: String, override val name: String, val 
       else if (contentList.head.name.equals(name)) contentList.head
       else findEntryHelper(name, contentList.tail)
 
-    findEntryHelper(name, contents)
+    findEntryHelper(entryName, contents)
   }
 
   def replaceEntry(entryName: String, newEntry: DirEntry): Directory =
-    new Directory(path, name, contents.filter(e => !e.name.equals(entryName)) :+ newEntry)
+    new Directory(parentPath, name, contents.filter(e => !e.name.equals(entryName)) :+ newEntry)
 
   override def asDirectory: Directory = this
+
+  override def getType: String = "Directory"
+
+  override def isDirectory: Boolean = true
+
+  override def isFile: Boolean = false
+
+  def isRoot: Boolean = parentPath.isEmpty
+
+  override def asFile: File = throw new MyFileSystemException("A directory cannot be converted to a file")
 }
 
 object Directory {
